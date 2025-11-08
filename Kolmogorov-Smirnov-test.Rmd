@@ -1,0 +1,155 @@
+---
+title: "Kolmogorov-Smirnov-test.R"
+author: "Vinzent Aschir, Balaji Govindarajan and Ankit Kummar"
+date: "2025-11-08"
+output: html_document
+---
+
+# empirical_CDF_and_Kolmogorov_Test
+
+## Instruction
+
+Empirical CDF and Kolmogorov Tests
+
+Study the empirical cumulative distribution function (ECDF) and the Kolmogorov–Smirnov test.Test whether a dataset follows a given distribution, or whether two samples come from the same one. Visualize ECDFs (implementated by yourself) and interpret.
+
+for cloning this github use:
+
+``` bash
+git clone https://github.com/Aschir/empirical_CDF_and_Kolmogorov_Test/
+```
+
+\## theory: what is the Kolmogorov-Smirnov test?
+
+(explanation)
+
+use case:
+
+1.  the given data follows a distribution
+
+2.  two samples come from the same distribution
+
+    ## Own implementation of Kolmogorov-Smirnov test
+
+    (v): i would set the seed at the very beginning of the document once for the whole document if possible
+
+    ```{r}
+    set.seed(42)
+    ```
+
+    ```{r}
+    x <- rnorm(150, mean = 0, sd = 1)  # example data
+    # One-sample KS against N(0,1)
+    ks_result_one <- ks.test(x, "pnorm", mean = 0, sd = 1)
+    print(ks_result_one)
+    ```
+
+## existing implementation 
+
+-   short explanation what is there:
+
+    -   hyperparamters
+
+    -   simple example
+
+    -   output + interpretation
+
+example - One Sample Kolmogorov-Smirnov Test (b)
+
+```{r}
+x <- rnorm(150, mean = 0, sd = 1)  # example data
+# One-sample KS against N(0,1)
+ks_result_one <- ks.test(x, "pnorm", mean = 0, sd = 1)
+print(ks_result_one)
+```
+
+(b): There is no significant evidence to say that the sample distribution is different from a Normal(0,1) distribution. The data likely comes from a standard normal distribution.
+
+example - two sample K-S Test
+
+```{r}
+x1 <- rnorm(120, mean = 0, sd = 1)     # Sample 1 from N(0,1)
+x2 <- rnorm(120, mean = 0.5, sd = 1)   # Sample 2 from N(0.5,1)
+
+ks_result_two <- ks.test(x1, x2)
+print(ks_result_two)
+```
+
+(b): There is a statistically significant difference between the distributions of x1 and x2 (p = 0.016). #Since x2 was generated with a higher mean (0.5 vs 0), the KS test correctly detected this difference
+
+ECDF
+
+```{r}
+my_ecdf <- function(data) {
+  n <- length(data)
+  sorted <- sort(data)
+  y <- (1:n) / n
+  data.frame(x = sorted, y = y)
+}
+sample_data <- c(4, 2, 7, 1, 9, 3)
+
+result <- my_ecdf(sample_data)
+View(result)
+
+# Step plot of your ECDF
+plot(result$x, result$y,
+     type = "s",  # "s" = step plot
+     col = "blue",
+     lwd = 2,
+     xlab = "Data values",
+     ylab = "ECDF",
+     main = "Empirical Cumulative Distribution Function")
+grid()
+```
+
+## Application
+
+load two datasets - one where the distribution is known and one where the distribution is unknown from the website: [data-website](https://www.kaggle.com/datasets)
+
+1.  data loading+ inspection
+2.  apply our function on this
+3.  apply the already implemented function on this
+4.  compare the output and visualize.
+5.  
+
+# Sandbox
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
+
+|         |                    |                            |
+|---------|--------------------|----------------------------|
+| Heading | `## Data Overview` | \<h2\>Data Overview\</h2\> |
+
+|      |            |          |
+|------|------------|----------|
+| Bold | `**bold**` | **bold** |
+
+|        |            |          |
+|--------|------------|----------|
+| Italic | `*italic*` | *italic* |
+
+|      |          |        |
+|------|----------|--------|
+| List | `- item` | • item |
+
+|             |                       |                 |
+|-------------|-----------------------|-----------------|
+| Code inline | `` `summary(cars)` `` | `summary(cars)` |
+
+|      |                               |                             |
+|------|-------------------------------|-----------------------------|
+| Link | `[RStudio](https://posit.co)` | [RStudio](https://posit.co) |
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
