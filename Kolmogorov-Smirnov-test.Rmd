@@ -19,6 +19,94 @@ for cloning this github use:
 git clone https://github.com/Aschir/empirical_CDF_and_Kolmogorov_Test/
 ```
 
+```{r}
+set.seed(42)
+```
+
+## theory about Kolmogorov-Smirnov test (KS-Test) 
+
+### One-sample Kolmogorov-Smirnov Test
+
+The one sample KS-test tests whether a given sample follows a given theoretical distribution.
+
+example question: does my data X follows an normal gaussian distribution:
+
+$X \sim N(\mu, \sigma^2)$ ?
+
+```{r}
+ n = 1000 # amount of shots a basketball player shoots. 
+ prob = 0.5 # probability that a basketball player scores a shot. 
+ 
+ X = rbinom(n=100, prob = 0.5)
+ print(length(X))
+ plot(1:length(X), X,
+     xlab = "sample index", ylab = "Value",
+     main = "Scatter plot of Binomial Samples",
+     pch = 16, col = "blue")
+ 
+```
+
+*Measurement:* measurement of the probability that X is following the theoretical distribution K is the calculated p-value, with whom we can accept or reject $H_0$.
+
+*Caracteristic:*
+
+\\＋ itt.
+
+<ul style="list-style-type:none;">
+
+<li>+ 's a non-parametric test: it doesn't use any parameters $\theta$ , like mean $\mu$ or variance $\sigma^2$ in order to come to an result.</li>
+
+<li> + sensitive to both shape and Sensitive to differences in both location (e.g. different $\mu$ )and shape (e.g. tightly clustered \<-\> spread out distribution).
+
+<li> - assumes a fix underlying distribution with already given parameters $\theta$ </li>
+
+</ul>
+
+*explanation:* In practical it remains mostly unknown what the followed distribution of your data is. As Long as you can calculate an approximative ECDF, you can apply the test:
+
+The test is calculating the maximal distance between the ECDF and the Theoretical distribtution:
+
+D= max​∣Fn​(x)−F(x)∣
+
+```{r}
+# Set seed for reproducibility
+set.seed(42)
+
+# Generate 100 points from a binomial distribution
+n <- 100
+size <- 10
+prob <- 0.5
+data <- rbinom(n, size = size, prob = prob)
+
+# 1. Plot the empirical CDF (ECDF)
+ecdf_data <- ecdf(data)
+plot(ecdf_data, main = "ECDF vs Normal CDF",
+     xlab = "x", ylab = "F(x)", verticals = TRUE, do.points = FALSE)
+
+# Overlay a normal CDF with mean and sd estimated from the sample
+mean_data <- mean(data)
+sd_data <- sd(data)
+curve(pnorm(x, mean = mean_data, sd = sd_data), add = TRUE, col = "red", lwd = 2)
+
+legend("bottomright", legend = c("Empirical CDF", "Normal CDF"),
+       col = c("black", "red"), lwd = 2)
+
+# 2. Perform a one-sample KS test
+# Note: ks.test assumes the theoretical distribution is fully specified.
+# If we estimate mean & sd from data, p-value is not exact (for teaching this is fine)
+ks_result <- ks.test(data, "pnorm", mean = mean_data, sd = sd_data)
+ks_result
+
+```
+
+###  Two-sample KS test
+
+the two-sample KS-test test whether two samples are following the same theoretical distribution.
+
+$X1 \sim K(\theta)$ and $X2 \sim K(\theta)$ ?
+
+\
+
 \## theory: what is the Kolmogorov-Smirnov test?
 
 (explanation)
@@ -44,7 +132,7 @@ use case:
     print(ks_result_one)
     ```
 
-## existing implementation 
+## existing implementation
 
 -   short explanation what is there:
 
