@@ -2,242 +2,235 @@
 title: "Kolmogorov-Smirnov-test.R"
 author: "Vinzent Aschir, Balaji Govindarajan and Ankit Kummar"
 date: "2025-11-08"
-output: html_document
+output:
+  pdf_document:
+    latex_engine: xelatex
+
 ---
 
 # empirical_CDF_and_Kolmogorov_Test
 
-## Instruction
+> **Instruction:** Study the empirical cumulative distribution function (ECDF) and the Kolmogorov–Smirnov test.Test whether a dataset follows a given distribution, or whether two samples come from the same one. Visualize ECDFs (implementated by yourself) and interpret.
 
-Empirical CDF and Kolmogorov Tests
+for following the project on your own clone by:
 
-Study the empirical cumulative distribution function (ECDF) and the Kolmogorov–Smirnov test.Test whether a dataset follows a given distribution, or whether two samples come from the same one. Visualize ECDFs (implementated by yourself) and interpret.
-
-for cloning this github use:
-
-``` bash
+```bash
 git clone https://github.com/Aschir/empirical_CDF_and_Kolmogorov_Test/
 ```
 
-```{r}
-set.seed(42)
-```
-
-## theory about Kolmogorov-Smirnov test (KS-Test) 
+## theory about Kolmogorov-Smirnov test (KS-Test)
 
 ### One-sample Kolmogorov-Smirnov Test
 
-The one sample KS-test tests whether a given sample follows a given theoretical distribution.
+The one-sample Kolmogorov–Smirnov (KS) test quantifies the difference between the empirical distribution of a dataset and a theoretical distribution and can be applied when your analysed data is  iid. 
 
-example question: does my data X follows an normal gaussian distribution:
+### Example:
 
-$X \sim N(\mu, \sigma^2)$ ?
+Testing if \$\$X \\sim N(\\mu, \\sigma\^2) \$\$
 
+A basketball player Mike, shoots each training 1000 times. he has 200 trainings and scores with a probability of p=0.5, does his score follow a normal distribution?
+
+$$ training \sim Binom(n=1000, p=0.5) $$
+with 100 performed trainings: 
 ```{r}
- n = 1000 # amount of shots a basketball player shoots. 
- prob = 0.5 # probability that a basketball player scores a shot. 
- 
- X = rbinom(n=100, prob = 0.5)
- print(length(X))
- plot(1:length(X), X,
-     xlab = "sample index", ylab = "Value",
-     main = "Scatter plot of Binomial Samples",
-     pch = 16, col = "blue")
- 
+set.seed(42)
+# data 
+n = 1000 
+prob = 0.5 
+n_training = 100 
+
+X = rbinom(n_training, size = n, prob = prob)
 ```
 
-*Measurement:* measurement of the probability that X is following the theoretical distribution K is the calculated p-value, with whom we can accept or reject $H_0$.
+$$H_0: X\sim N(\mu = 500, \sigma^2)$$
 
-*Caracteristic:*
+$$H_1: X \not\sim N(\mu = 500, \sigma^2)$$
 
-\\＋ itt.
-
-<ul style="list-style-type:none;">
-
-<li>+ 's a non-parametric test: it doesn't use any parameters $\theta$ , like mean $\mu$ or variance $\sigma^2$ in order to come to an result.</li>
-
-<li> + sensitive to both shape and Sensitive to differences in both location (e.g. different $\mu$ )and shape (e.g. tightly clustered \<-\> spread out distribution).
-
-<li> - assumes a fix underlying distribution with already given parameters $\theta$ </li>
-
-</ul>
-
-*explanation:* In practical it remains mostly unknown what the followed distribution of your data is. As Long as you can calculate an approximative ECDF, you can apply the test:
-
-The test is calculating the maximal distance between the ECDF and the Theoretical distribtution:
-
-D= max​∣Fn​(x)−F(x)∣
+Let's have a look in it's distribution:
 
 ```{r}
-# Set seed for reproducibility
 set.seed(42)
 
-# Generate 100 points from a binomial distribution
-n <- 100
-size <- 10
-prob <- 0.5
-data <- rbinom(n, size = size, prob = prob)
+# for visualisation:  10% quantile and closest point to 10% quantile
+q10 <- quantile(X, 0.1)                      
+closest_q10 <- X[which.min(abs(X - q10))]   
 
-# 1. Plot the empirical CDF (ECDF)
-ecdf_data <- ecdf(data)
-plot(ecdf_data, main = "ECDF vs Normal CDF",
-     xlab = "x", ylab = "F(x)", verticals = TRUE, do.points = FALSE)
+# ---- Plot 1: the distribution of X ----
+plot(1:length(X), X,
+     xlab = "training index (sample)", 
+     ylab = "Scores in this training",
+     main = "Distribution of scores in the progress of trainings.",
+     pch = 16, 
+     col="grey")
 
-# Overlay a normal CDF with mean and sd estimated from the sample
-mean_data <- mean(data)
-sd_data <- sd(data)
-curve(pnorm(x, mean = mean_data, sd = sd_data), add = TRUE, col = "red", lwd = 2)
+# ---- Plot 2: Histogram + part shaded + theoretical curve ----
+h = hist(X,
+         breaks = 50,
+         probability = TRUE,
+         main = paste0("Distribution of scored points"),
+         xlab = "Scores in a training",
+         col = "lightgray",
+         border = "white")
 
-legend("bottomright", legend = c("Empirical CDF", "Normal CDF"),
-       col = c("black", "red"), lwd = 2)
+# --- Shade bars up to closest 10% quantile ---
+for (i in 1:(length(h$breaks)-1)) {
+  left  <- h$breaks[i]
+  right <- h$breaks[i+1]
+  mid   <- (left + right) / 2
+  
+  if (mid <= closest_q10) {
+    rect(left, 0, right, h$density[i],
+         col = rgb(1, 0, 0, 0.4),
+         border = NA)
+  }
+}
 
-# 2. Perform a one-sample KS test
-# Note: ks.test assumes the theoretical distribution is fully specified.
-# If we estimate mean & sd from data, p-value is not exact (for teaching this is fine)
-ks_result <- ks.test(data, "pnorm", mean = mean_data, sd = sd_data)
+# --- Theoretical distribution ---
+x_vals <- seq(min(X), max(X), length.out = 200)
+theo_density <- dnorm(x_vals, mean = 500, sd = sqrt(250))
+
+lines(x_vals, theo_density, col = "blue", lwd = 3)
+
+# --- Legend ---
+legend(
+  "topright",
+  legend = c(paste0("P(X ≤ ", closest_q10, ")"), 
+             "theo. distr. (H0)", 
+             "distr. data"),
+  pch    = 22,                          
+  pt.cex = 2,
+  pt.bg  = c(rgb(1,0,0,0.4), "blue", "lightgray"),  # fill colors
+  col    = c(rgb(1,0,0,0.4), "blue", "lightgray"),  # border colors
+  bty    = "n"
+)
+```
+
+In a general setting,
+
+Null hypothesis: $H_0: F_X = F_0$\
+Alternative hypothesis: $H_1: F_X \neq F_0$
+
+and our test statistic is:
+
+$$
+D_n = \sup_x |F_n(x) - F(x)|
+$$
+
+We make no assumptions on the parameter of the given distribution! Only the CDF 
+
+We Compute the CDF:
+
+```{r}
+set.seed(42)
+
+#CDF (ECDF) of the given DATA. 
+  ecdf_X = ecdf(X) # we use the given func for the data 
+  
+  plot(ecdf_X,
+       main = "Empirical CDF of X",
+       xlab = "x",
+       ylab = "F(x)",
+       verticals = TRUE,
+       do.points = FALSE)
+
+# theoretical cdf in manual computation of the cdf 
+  x_vals = seq(min(X), max(X), length.out = 200)
+  cdf_theo <- pnorm(x_vals, mean = 500, sd = sqrt(250))
+
+  lines(x_vals, cdf_theo, col = "blue", lwd = 2)
+
+# Add the point seen in the previous data 
+  y_q10 <- ecdf_X(closest_q10)
+  
+  points(closest_q10, y_q10, col = rgb(1, 0, 0, 0.4), pch = 16)
+
+# ---- Add vertical line for sup difference (Kolmogorov D) ----
+
+  # max difference computation
+  emp_vals <- ecdf_X(x_vals)
+  diffs <- abs(emp_vals - cdf_theo)
+  D <- max(diffs)
+  
+  
+  x_value_f <- x_vals[which.max(diffs)]
+  y_emp_at_f <- emp_vals[which.max(diffs)]
+  y_theo_at_f <- cdf_theo[which.max(diffs)]
+  eps <- 1e-8
+
+  # draw the vertical line of max difference
+  #segments(x0 = x_value_f, y0 = y_emp_at_f,
+  #       x1 = x_value_f, y1 = y_theo_at_f,
+  #       col = "red", lwd = 2, lty = 2)
+  
+
+
+  # mark max difference points in their distributions
+  points(x_value_f, y_emp_at_f, col="red", pch=16)
+  points(x_value_f, y_theo_at_f, col="blue", pch=16)
+  lines(x = c(x_value_f-eps, x_value_f+eps), y = c(y_emp_at_f, y_theo_at_f),
+      col = "red", lwd = 2, lty = 2)
+  
+  legend("topleft",
+       legend = c("ECDF of X", 
+                  "Theoretical CDF", 
+                  paste0("Max difference D = ", round(D, 3)),
+                  paste0("P(X ≤ ", closest_q10, ")")),
+       col = c("black", "blue", "red", rgb(1,0,0,0.4)),
+       lwd = c(1, 1, 1, NA),
+       lty = c(1, 1, 1, NA),
+       pch = c(NA, NA, 1, 16),
+       bty = "n")
+
+```
+
+we used the maximum as a numerical approximation of the supremum.
+
+the supremum would consider all points not only the ones in the dataset.
+
+the maxium deviation difference is not normal distributed but follows a Kolmogorov-Smirnov deviations- distribution defined by:
+
+The maximum deviation $D_n$ is **not normally distributed**. Instead, it follows the **Kolmogorov distribution**, which has the cumulative distribution function:
+
+$$
+P(\sqrt{n} D_n \le \lambda) = 1 - 2 \sum_{k=1}^{\infty} (-1)^{k-1} e^{-2 k^2 \lambda^2}
+$$
+
+which is in r:
+
+```{r}
+ks_pvalue <- function(D, n, maxK=1000){
+  lambda <- sqrt(n) * D
+  k <- 1:maxK
+  pval <- 2 * sum((-1)^(k-1) * exp(-2 * k^2 * lambda^2))
+  pval <- min(max(pval, 0), 1)
+  return(pval)
+}
+```
+
+now we compute the p-value: and form our decision boundary:
+
+\\[\\text{p-value} = P(D_n \\ge D\_{\\text{obs}} \\mid H_0)\\]
+
+```{r}
+p_value <- ks_pvalue(D, length(X))
+p_value
+
+# Decision based on alpha
+alpha <- 0.05
+if(p_value < alpha){
+  cat("Reject H0: the data does not follow the theoretical distribution.\n")
+} else {
+  cat("Fail to reject H0: no evidence against the theoretical distribution.\n")
+}
+```
+
+we can compare our computation with the builtin-method:
+
+the results are not very accurate since we used the maximum instead of the minimum and for sakes of explainability an discrete distribution function instead of an continious function
+
+```{r}
+# Built-in KS test
+ks_result <- ks.test(X, "pnorm", mean = 500, sd = sqrt(250))
 ks_result
 
 ```
-
-###  Two-sample KS test
-
-the two-sample KS-test test whether two samples are following the same theoretical distribution.
-
-$X1 \sim K(\theta)$ and $X2 \sim K(\theta)$ ?
-
-\
-
-\## theory: what is the Kolmogorov-Smirnov test?
-
-(explanation)
-
-use case:
-
-1.  the given data follows a distribution
-
-2.  two samples come from the same distribution
-
-    ## Own implementation of Kolmogorov-Smirnov test
-
-    (v): i would set the seed at the very beginning of the document once for the whole document if possible
-
-    ```{r}
-    set.seed(42)
-    ```
-
-    ```{r}
-    x <- rnorm(150, mean = 0, sd = 1)  # example data
-    # One-sample KS against N(0,1)
-    ks_result_one <- ks.test(x, "pnorm", mean = 0, sd = 1)
-    print(ks_result_one)
-    ```
-
-## existing implementation
-
--   short explanation what is there:
-
-    -   hyperparamters
-
-    -   simple example
-
-    -   output + interpretation
-
-example - One Sample Kolmogorov-Smirnov Test (b)
-
-```{r}
-x <- rnorm(150, mean = 0, sd = 1)  # example data
-# One-sample KS against N(0,1)
-ks_result_one <- ks.test(x, "pnorm", mean = 0, sd = 1)
-print(ks_result_one)
-```
-
-(b): There is no significant evidence to say that the sample distribution is different from a Normal(0,1) distribution. The data likely comes from a standard normal distribution.
-
-example - two sample K-S Test
-
-```{r}
-x1 <- rnorm(120, mean = 0, sd = 1)     # Sample 1 from N(0,1)
-x2 <- rnorm(120, mean = 0.5, sd = 1)   # Sample 2 from N(0.5,1)
-
-ks_result_two <- ks.test(x1, x2)
-print(ks_result_two)
-```
-
-(b): There is a statistically significant difference between the distributions of x1 and x2 (p = 0.016). #Since x2 was generated with a higher mean (0.5 vs 0), the KS test correctly detected this difference
-
-ECDF
-
-```{r}
-my_ecdf <- function(data) {
-  n <- length(data)
-  sorted <- sort(data)
-  y <- (1:n) / n
-  data.frame(x = sorted, y = y)
-}
-sample_data <- c(4, 2, 7, 1, 9, 3)
-
-result <- my_ecdf(sample_data)
-View(result)
-
-# Step plot of your ECDF
-plot(result$x, result$y,
-     type = "s",  # "s" = step plot
-     col = "blue",
-     lwd = 2,
-     xlab = "Data values",
-     ylab = "ECDF",
-     main = "Empirical Cumulative Distribution Function")
-grid()
-```
-
-## Application
-
-load two datasets - one where the distribution is known and one where the distribution is unknown from the website: [data-website](https://www.kaggle.com/datasets)
-
-1.  data loading+ inspection
-2.  apply our function on this
-3.  apply the already implemented function on this
-4.  compare the output and visualize.
-5.  
-
-# Sandbox
-
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
-
-|         |                    |                            |
-|---------|--------------------|----------------------------|
-| Heading | `## Data Overview` | \<h2\>Data Overview\</h2\> |
-
-|      |            |          |
-|------|------------|----------|
-| Bold | `**bold**` | **bold** |
-
-|        |            |          |
-|--------|------------|----------|
-| Italic | `*italic*` | *italic* |
-
-|      |          |        |
-|------|----------|--------|
-| List | `- item` | • item |
-
-|             |                       |                 |
-|-------------|-----------------------|-----------------|
-| Code inline | `` `summary(cars)` `` | `summary(cars)` |
-
-|      |                               |                             |
-|------|-------------------------------|-----------------------------|
-| Link | `[RStudio](https://posit.co)` | [RStudio](https://posit.co) |
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

@@ -126,7 +126,7 @@ Each presentation will last **10 minutes**, followed by **5 minutes of questions
 Each group will receive **two grades**:
 
 | Component | Description | Weight |
-|-------------|-----------------------------------------------|-------------|
+|----|----|----|
 | Presentation | Clarity, pedagogy, correctness of implementation, and quality of explanations | 70% |
 | Questions | Quality and relevance of the question asked to another group | 30% |
 
