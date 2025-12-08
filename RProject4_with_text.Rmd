@@ -1,0 +1,437 @@
+---
+title: "Kolmogorov–Smirnov-test.R"
+author: "Vinzent Aschir, Balaji Govindarajan and Ankit Kummar"
+date: "2025-11-08"
+output: html_document
+---
+
+# empirical_CDF_and_Kolmogorov_Test
+
+Instruction: Study the empirical cumulative distribution function (ECDF) and the Kolmogorov–Smirnov test.  
+Test whether a dataset follows a given distribution, or whether two samples come from the same one.  
+Visualize ECDFs (implemented by yourself) and interpret.
+
+For following the project on your own clone by:
+
+`git clone https://github.com/Aschir/empirical_CDF_and_Kolmogorov_Test/`
+
+---
+
+## Theory about Kolmogorov–Smirnov test (KS-Test)
+
+### One-sample Kolmogorov–Smirnov Test
+
+The one-sample Kolmogorov–Smirnov (KS) test quantifies the difference between the empirical distribution
+of a dataset and a theoretical distribution and can be applied when your analysed data is iid.
+
+Example: Testing if \( X \sim N(\mu, \sigma^2) \)
+
+A basketball player Mike shoots each training 1000 times. He has 200 trainings and scores with a probability
+of \( p = 0.5 \). Does his score follow a normal distribution?
+
+\[
+\text{training} \sim \text{Binom}(n = 1000, p = 0.5)
+\]
+
+with 100 performed trainings:
+
+```{r}
+set.seed(42)
+# data
+n = 1000
+prob = 0.5
+n_training = 100
+X = rbinom(n_training, size = n, prob = prob)
+```
+
+Hypotheses:
+
+\[
+H_0 : X \sim N(\mu = 500, \sigma^2) \\
+H_1 : X \nsim N(\mu = 500, \sigma^2)
+\]
+
+Let’s have a look at its distribution:
+
+```{r}
+set.seed(42)
+# for visualisation: 10% quantile and closest point to 10% quantile
+q10 <- quantile(X, 0.1)
+closest_q10 <- X[which.min(abs(X - q10))]
+
+# ---- Plot 1: the distribution of X ----
+plot(1:length(X), X,
+     xlab = "training index (sample)",
+     ylab = "Scores in this training",
+     main = "Distribution of scores in the progress of trainings.",
+     pch = 16,
+     col ="grey")
+```
+
+```{r}
+# ---- Plot 2: Histogram + part shaded + theoretical curve ----
+h = hist(X,
+         breaks = 50,
+         probability = TRUE,
+         main = "Distribution of scored points",
+         xlab = "Scores in a training",
+         col = "lightgray",
+         border = "white")
+
+# --- Shade bars up to closest 10% quantile ---
+for (i in 1:(length(h$breaks) - 1)) {
+  left <- h$breaks[i]
+  right <- h$breaks[i+1]
+  mid <- (left + right) / 2
+  if (mid <= closest_q10) {
+    rect(left, 0, right, h$density[i],
+         col = rgb(1, 0, 0, 0.4),
+         border = NA)
+  }
+}
+
+# --- Theoretical distribution ---
+x_vals <- seq(min(X), max(X), length.out = 200)
+theo_density <- dnorm(x_vals, mean = 500, sd = sqrt(250))
+lines(x_vals, theo_density, col = "blue", lwd = 3)
+
+# --- Legend ---
+legend("topright",
+       legend = c(paste0("P(X ≤ ", closest_q10, ")"),
+                  "theo. distr. (H0)",
+                  "distr. data"),
+       pch = 22,
+       pt.cex = 2,
+       pt.bg = c(rgb(1,0,0,0.4), "blue", "lightgray"),
+       col = c(rgb(1,0,0,0.4), "blue", "lightgray"),
+       bty = "n")
+```
+
+In a general setting,
+
+- Null hypothesis: \( H_0 : F_X = F_0 \)  
+- Alternative hypothesis: \( H_1 : F_X \ne F_0 \)
+
+and our test statistic is:
+
+\[
+D_n = \sup_x \big| F_n(x) - F(x) \big|
+\]
+
+We make no assumptions on the parameter of the given distribution! Only the CDF.
+
+We compute the CDF:
+
+```{r}
+set.seed(42)
+# CDF (ECDF) of the given DATA.
+ecdf_X = ecdf(X) # we use the given func for the data
+plot(ecdf_X,
+     main = "Empirical CDF of X",
+     xlab = "x",
+     ylab = "F(x)",
+     verticals = TRUE,
+     do.points = FALSE)
+
+# theoretical cdf in manual computation of the cdf
+x_vals = seq(min(X), max(X), length.out = 200)
+cdf_theo <- pnorm(x_vals, mean = 500, sd = sqrt(250))
+lines(x_vals, cdf_theo, col = "blue", lwd = 2)
+
+# Add the point seen in the previous data
+y_q10 <- ecdf_X(closest_q10)
+points(closest_q10, y_q10, col = rgb(1, 0, 0, 0.4), pch = 16)
+
+# max difference computation
+emp_vals <- ecdf_X(x_vals)
+diffs <- abs(emp_vals - cdf_theo)
+D <- max(diffs)
+x_value_f <- x_vals[which.max(diffs)]
+y_emp_at_f <- emp_vals[which.max(diffs)]
+y_theo_at_f <- cdf_theo[which.max(diffs)]
+eps <- 1e-8
+
+points(x_value_f, y_emp_at_f, col="red", pch=16)
+points(x_value_f, y_theo_at_f, col="blue", pch=16)
+lines(x = c(x_value_f-eps, x_value_f+eps), y = c(y_emp_at_f, y_theo_at_f),
+      col = "red", lwd = 2, lty = 2)
+
+legend("topleft",
+       legend = c("ECDF of X",
+                  "Theoretical CDF",
+                  paste0("Max difference D = ", round(D, 3)),
+                  paste0("P(X ≤ ", closest_q10, ")")),
+       col = c("black", "blue", "red", rgb(1,0,0,0.4)),
+       lwd = c(1, 1, 1, NA),
+       lty = c(1, 1, 1, NA),
+       pch = c(NA, NA, 1, 16),
+       bty = "n")
+```
+
+We used the maximum as a numerical approximation of the supremum.
+The supremum would consider all points, not only the ones in the dataset.
+
+The maximum deviation difference is not normally distributed but follows a Kolmogorov–Smirnov deviation distribution defined by:
+
+The maximum deviation \(D_n\) is not normally distributed. Instead, it follows the Kolmogorov distribution, which has the cumulative distribution function
+
+\[
+P(\sqrt{n} D_n \le \lambda) = 1 - 2 \sum_{k=1}^{\infty} (-1)^{k-1} e^{-2 k^2 \lambda^2}
+\]
+
+which is in R:
+
+```{r}
+ks_pvalue <- function(D, n, maxK = 1000){
+  lambda <- sqrt(n) * D
+  k <- 1:maxK
+  pval <- 2 * sum((-1)^(k-1) * exp(-2 * k^2 * lambda^2))
+  pval <- min(max(pval, 0), 1)
+  return(pval)
+}
+
+# compute p-value
+p_value <- ks_pvalue(D, length(X))
+p_value
+
+# Decision based on alpha
+alpha <- 0.05
+if (p_value < alpha) {
+  cat("Reject H0: the data does not follow the theoretical distribution.\n")
+} else {
+  cat("Fail to reject H0: no evidence against the theoretical distribution.\n")
+}
+```
+
+We can compare our computation with the builtin method:
+
+```{r}
+# Built-in KS test
+ks_result <- ks.test(X, "pnorm", mean = 500, sd = sqrt(250))
+ks_result
+```
+
+The results are not very accurate since we used the maximum instead of the minimum and, for sake of explainability, a discrete distribution function instead of a continuous function.
+
+---
+
+## Project Continuity: Theory vs. Application (The K-S Test)
+
+Also, we will run both the One-Sample and the Two-Sample K-S Tests on the practical geyser 
+data to prove it is not a single bell curve, but is actually made of two separate and distinct 
+schedules.
+
+| Parameter            | Theoretical Component                                                                 | Practical Component                                                                 |
+|----------------------|---------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------|
+| Data Source          | Used an artificially generated dataset (Binomial simulation) to ensure clean, controlled data for formula testing. | Will use a real-world dataset (faithful geyser waiting times) known to be messy and bimodal, representing a true challenge. |
+| Primary Goal         | Confirmed a hypothesis (failed to reject the Null Hypothesis), proving the K-S test correctly identifies a clean, theoretical distribution. | Will challenge a hypothesis (will reject the Null Hypothesis), proving that the real data is too complex for simple models and requires deeper analysis. |
+| Core Method          | Focused on formula validation by manually calculating the K-S p-value.               | Will include the manual ECDF plot and the two distinct distribution plot.          |
+| ECDF Visualization   | Visualized the ECDF of the observed data against the theoretical distribution to check for fit. | Will manually create the ECDF step chart to prove foundational understanding of how the data accumulates. |
+
+---
+
+## Project Goals – For this messy, bimodal, real world dataset
+
+- Verifying Distribution: We use statistics to formally prove that the geyser data, which visibly shows two different schedules (short and long waits), is not a simple, single "bell curve."
+- Manual ECDF Implementation: We manually build the cumulative step chart (ECDF) to show exactly how the data accumulates from 0% to 100%.
+- One-Sample K-S Test: We run this test to reject the bell curve assumption, stopping us from making the critical mistake of using a simple, wrong forecasting model.
+- Two-Sample K-S Test: We split the data into two groups (Short Waits and Long Waits) and use this test to prove that they are drawn from two separate and distinct distributions.
+
+### Advantages and Applications (Why It Matters)
+
+- Prevents Model Failure: The most critical advantage is preventing the misapplication of statistical models. Ignoring the bimodal nature of the data would lead to unreliable forecasting results if a simple Normal model were used.
+
+---
+
+# Project 4: Empirical CDF and Kolmogorov Tests – Steps
+
+### Step 1: Set Up the Environment
+
+Started coding on blank R Script in RStudio.
+
+### Step 2: Load Data and Library
+
+In this step, we load the `ggplot2` plotting tool and the `faithful` dataset. After quickly inspecting the data structure (`str`, `head`), we extract the vital `waiting` column and save it specifically as `waiting_times`. The step concludes by running a summary to establish the initial statistics for this new variable.
+
+- `str(faithful)`: This shows you the names of the variables and their types.  
+- `head(faithful)`: View the first few rows to understand the data.
+
+Basically, inspecting the structure of the dataset, then getting descriptive statistics of the variable `waiting_times`.
+
+```{r setup-faithful, message=FALSE}
+library(ggplot2)
+data(faithful)
+str(faithful)
+head(faithful)
+waiting_times <- faithful$waiting
+summary(waiting_times)
+```
+
+### Step 3: Inspect Data
+
+Plotted a histogram on `waiting_times` to visually confirm its bimodal nature, which indicates it is not a Normal distribution.
+
+```{r hist-waiting}
+hist(waiting_times,
+     main = "Distribution of Geyser Waiting Times",
+     xlab = "Waiting Time (minutes)",
+     col = "lightblue",
+     border = "white")
+```
+
+Why This Makes the Project "Interesting":
+
+- Because the histogram shows two humps, it tells us that the geyser is not operating on one single, random schedule. It strongly suggests there are two different natural states: a "short cycle" (around 55 minutes) and a "long cycle" (around 80 minutes).
+- Our project's entire purpose is to take that visual suggestion from the histogram and use advanced statistical tools (the ECDF and K-S tests) to mathematically prove that those two schedules are real and separate.
+
+### Step 4: Sort the Data (ECDF Step 1)
+
+Sort the data points, which will serve as the x-values for the ECDF plot.
+
+```{r ecdf-step1}
+data_sorted <- sort(waiting_times)
+```
+
+### Step 5: Calculate Proportions (ECDF Step 2)
+
+Determine the total number of observations (n) and calculate the cumulative proportion (i/n) for each sorted point.
+
+```{r ecdf-step2}
+n <- length(data_sorted)
+ecdf_values <- (1:n) / n
+```
+
+### Step 6: Prepare Plotting Data
+
+Combine the sorted data and the proportions into a single data frame for visualization.
+
+```{r ecdf-step3}
+ecdf_df_manual <- data.frame(
+  x = data_sorted,
+  Fn = ecdf_values
+)
+```
+
+### Step 7: Visualize the ECDF
+
+Create a plot using ggplot2 and `geom_step()` to generate the required step-function visualization of the manually calculated ECDF.
+
+```{r ecdf-plot}
+ggplot(ecdf_df_manual, aes(x = x, y = Fn)) +
+  geom_step(color = "darkred", size = 1) +
+  labs(
+    title = "Manually Implemented Empirical CDF",
+    x = "Waiting Time (minutes)",
+    y = "F_n(x)"
+  )
+```
+
+The chart is mathematically perfect because it correctly plots the cumulative percentage from 0% to 100% using steps, and clearly shows the two distinct clusters where the curve rises steeply.
+
+### Step 8: Estimate Normal Parameters
+
+Calculate the mean (mu) and standard deviation (sigma) of the data, as these are required parameters for the theoretical Normal distribution in the K-S test.
+
+```{r normal-params}
+mu <- mean(waiting_times)
+sigma <- sd(waiting_times)
+mu
+sigma
+```
+
+### Step 9: Perform One-Sample K-S Test
+
+Execute the test against the theoretical Normal CDF (`pnorm`) defined by the calculated mu and sigma.
+
+```{r one-sample-ks-faithful}
+ks_test_normal <- ks.test(waiting_times, "pnorm", mean = mu, sd = sigma)
+ks_test_normal
+```
+
+### Step 10: Interpret K-S Test 1
+
+The results from the one-sample Kolmogorov–Smirnov test show a test statistic of **D = 0.15536** and a **p-value of 3.967e-06**.
+
+Since the p-value (0.000003967) is far below the conventional significance level of \( \alpha = 0.05 \), we must **reject the Null Hypothesis (H_0)** that the data is drawn from a Normal distribution defined by the sample's mean and standard deviation.
+
+This statistical rejection strongly validates our initial visual assessment of the histogram, which showed the data is clearly **bimodal** (has two peaks), making it fundamentally incompatible with the single-peaked, bell-shaped characteristics of the Normal distribution.
+
+### Step 11: Create Two Samples
+
+Split the data into two distinct groups based on the median to prepare for the two-sample K-S test.
+
+```{r split-samples}
+median_time <- median(waiting_times)
+sample_A <- waiting_times[waiting_times <= median_time]
+sample_B <- waiting_times[waiting_times > median_time]
+median_time
+length(sample_A)
+length(sample_B)
+```
+
+### Step 12: Perform Two-Sample K-S Test
+
+Run the K-S test to check if `sample_A` and `sample_B` are drawn from the same continuous distribution.
+
+```{r two-sample-ks-faithful}
+ks_test_two_sample <- ks.test(sample_A, sample_B)
+ks_test_two_sample
+```
+
+### Step 13: Interpret K-S Test 2
+
+The Two-Sample Kolmogorov–Smirnov test was performed to check the Null Hypothesis (H_0) that the "shorter waiting times" (Sample A) and "longer waiting times" (Sample B) come from the same continuous distribution.
+
+The result is highly significant:
+
+- K-S Statistic (D): 1  
+- P-value: \< 2.2e-16  
+
+The test statistic D achieved its maximum value of 1, and the resulting p-value is effectively zero; we **strongly reject the Null Hypothesis**.
+
+**Conclusion:** The distribution of the short waiting times and the distribution of the long waiting times are statistically distinct. This confirms that the `faithful` dataset is not just bimodal, but is likely a mixture of two separate (two different waiting time distributions operating within the same system).
+
+### Step 14: Visualize the Two Separate Distributions (for pedagogical completeness)
+
+```{r density-plot-faithful}
+# 1. Create a data frame for Sample A and add a group label
+df_A <- data.frame(
+  waiting = sample_A,
+  group = "Short Waits (<= 75 min)"
+)
+
+# 2. Create a data frame for Sample B and add a group label
+df_B <- data.frame(
+  waiting = sample_B,
+  group = "Long Waits (> 75 min)"
+)
+
+# 3. Combine the two data frames
+combined_samples_df <- rbind(df_A, df_B)
+
+# Plot the densities on a single graph
+ggplot(combined_samples_df, aes(x = waiting, fill = group)) +
+  geom_density(alpha = 0.6) +
+  labs(
+    title = "Visual Confirmation of Two Distinct Distributions",
+    x = "Waiting Time (minutes)",
+    y = "Density",
+    fill = "Sample Group"
+  ) +
+  theme_minimal() +
+  scale_fill_manual(
+    values = c(
+      "Short Waits (<= 75 min)" = "deepskyblue4",
+      "Long Waits (> 75 min)"   = "darkorange3"
+    )
+  )
+```
+
+Why this is a Great Result?
+
+- The graph clearly shows why we rejected the Null Hypothesis in both K-S tests.  
+- We rejected the idea that the total data follows one Normal curve.  
+- The image shows the two separate bell shapes that are actually present.  
+- Two-Sample K-S Test (Step 12): We rejected the idea that the "Short Waits" (Blue) and "Long Waits" (Orange) come from the same distribution.  
+- The graph clearly shows these two distributions are distinct and separate.  
+- Confirms D = 1: The minimal overlap between the blue and orange curves, especially in the tails, is what drove your K-S statistic D to 1.
